@@ -1,7 +1,7 @@
 #region License
-// 
-// Copyright (c) 2007-2009, Sean Chambers <schambers80@gmail.com>
-// 
+//
+// Copyright (c) 2007-2018, Sean Chambers <schambers80@gmail.com>
+//
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -19,24 +19,35 @@
 using System.IO;
 using System.Reflection;
 
+using FluentMigrator.Runner.Infrastructure;
+
 namespace FluentMigrator.Runner.Initialization.AssemblyLoader
 {
     public class AssemblyLoaderFromFile : IAssemblyLoader
     {
-        readonly string name;
+        private readonly string _name;
 
         public AssemblyLoaderFromFile(string name)
         {
-            this.name = name;
+            _name = name;
         }
 
         public Assembly Load()
         {
-            string fileName = this.name;
+            string fileName = _name;
             if (!Path.IsPathRooted(fileName))
             {
-                fileName = Path.GetFullPath(this.name);
+                fileName = Path.Combine(RuntimeHost.Current.BaseDirectory, _name);
+                if (!File.Exists(fileName))
+                {
+                    fileName = Path.GetFullPath(_name);
+                    if (!File.Exists(fileName))
+                    {
+                        fileName = _name;
+                    }
+                }
             }
+
             Assembly assembly = Assembly.LoadFrom(fileName);
             return assembly;
         }

@@ -1,7 +1,7 @@
 #region License
-// 
-// Copyright (c) 2007-2009, Sean Chambers <schambers80@gmail.com>
-// 
+//
+// Copyright (c) 2007-2018, Sean Chambers <schambers80@gmail.com>
+//
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -16,30 +16,51 @@
 //
 #endregion
 
+using System.Collections.Generic;
+
 using FluentMigrator.Expressions;
+using FluentMigrator.Infrastructure;
 using FluentMigrator.Model;
 
 namespace FluentMigrator.Builders.Create.Index
 {
+    /// <summary>
+    /// An expression builder for a <see cref="CreateIndexExpression"/>
+    /// </summary>
     public class CreateIndexExpressionBuilder : ExpressionBuilderBase<CreateIndexExpression>,
         ICreateIndexForTableSyntax,
         ICreateIndexOnColumnOrInSchemaSyntax,
         ICreateIndexColumnOptionsSyntax,
-        ICreateIndexOptionsSyntax
+        ICreateIndexOptionsSyntax,
+        ISupportAdditionalFeatures,
+        ICreateIndexColumnUniqueOptionsSyntax,
+        ICreateIndexMoreColumnOptionsSyntax
     {
-        public IndexColumnDefinition CurrentColumn { get; set; }
-
+        /// <summary>
+        /// Initializes a new instance of the <see cref="CreateIndexExpressionBuilder"/> class.
+        /// </summary>
+        /// <param name="expression">The underlying expression</param>
         public CreateIndexExpressionBuilder(CreateIndexExpression expression)
             : base(expression)
         {
         }
 
+        /// <inheritdoc />
+        public IDictionary<string, object> AdditionalFeatures => Expression.Index.AdditionalFeatures;
+
+        /// <summary>
+        /// Gets or sets the current index column definition
+        /// </summary>
+        public IndexColumnDefinition CurrentColumn { get; set; }
+
+        /// <inheritdoc />
         public ICreateIndexOnColumnOrInSchemaSyntax OnTable(string tableName)
         {
             Expression.Index.TableName = tableName;
             return this;
         }
 
+        /// <inheritdoc />
         public ICreateIndexColumnOptionsSyntax OnColumn(string columnName)
         {
             CurrentColumn = new IndexColumnDefinition { Name = columnName };
@@ -47,47 +68,55 @@ namespace FluentMigrator.Builders.Create.Index
             return this;
         }
 
+        /// <inheritdoc />
         public ICreateIndexOptionsSyntax WithOptions()
         {
             return this;
         }
 
+        /// <inheritdoc />
         public ICreateIndexOnColumnSyntax InSchema(string schemaName)
         {
             Expression.Index.SchemaName = schemaName;
             return this;
         }
 
-        public ICreateIndexOnColumnSyntax Ascending()
+        /// <inheritdoc />
+        public ICreateIndexMoreColumnOptionsSyntax Ascending()
         {
             CurrentColumn.Direction = Direction.Ascending;
             return this;
         }
 
-        public ICreateIndexOnColumnSyntax Descending()
+        /// <inheritdoc />
+        public ICreateIndexMoreColumnOptionsSyntax Descending()
         {
             CurrentColumn.Direction = Direction.Descending;
             return this;
         }
 
-        ICreateIndexOnColumnSyntax ICreateIndexColumnOptionsSyntax.Unique()
+        /// <inheritdoc />
+        public ICreateIndexColumnUniqueOptionsSyntax Unique()
         {
             Expression.Index.IsUnique = true;
             return this;
         }
 
-        public ICreateIndexOnColumnSyntax Unique()
+        /// <inheritdoc />
+        ICreateIndexOnColumnSyntax ICreateIndexOptionsSyntax.Unique()
         {
             Expression.Index.IsUnique = true;
             return this;
         }
 
+        /// <inheritdoc />
         public ICreateIndexOnColumnSyntax NonClustered()
         {
             Expression.Index.IsClustered = false;
             return this;
         }
 
+        /// <inheritdoc />
         public ICreateIndexOnColumnSyntax Clustered()
         {
             Expression.Index.IsClustered = true;

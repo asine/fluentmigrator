@@ -13,10 +13,10 @@
 // distribute, sublicense, and/or sell copies of the Software, and to
 // permit persons to whom the Software is furnished to do so, subject to
 // the following conditions:
-// 
+//
 // The above copyright notice and this permission notice shall be
 // included in all copies or substantial portions of the Software.
-// 
+//
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
 // EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
 // MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
@@ -37,16 +37,16 @@
 // A Getopt::Long-inspired option parsing library for C#.
 //
 // NDesk.Options.OptionSet is built upon a key/value table, where the
-// key is a option format string and the value is a delegate that is 
+// key is a option format string and the value is a delegate that is
 // invoked when the format string is matched.
 //
 // Option format strings:
-//  Regex-like BNF Grammar: 
+//  Regex-like BNF Grammar:
 //    name: .+
 //    type: [=:]
 //    sep: ( [^{}]+ | '{' .+ '}' )?
 //    aliases: ( name type sep ) ( '|' name type sep )*
-// 
+//
 // Each '|'-delimited name is an alias for the associated action.  If the
 // format string ends in a '=', it has a required value.  If the format
 // string ends in a ':', it has an optional value.  If neither '=' or ':'
@@ -92,7 +92,7 @@
 //  p.Parse (new string[]{"-v", "--v", "/v", "-name=A", "/name", "B", "extra"});
 //
 // The above would parse the argument string array, and would invoke the
-// lambda expression three times, setting `verbose' to 3 when complete.  
+// lambda expression three times, setting `verbose' to 3 when complete.
 // It would also print out "A" and "B" to standard output.
 // The returned array would contain the string "extra".
 //
@@ -123,31 +123,21 @@
 //      p.Parse (new string[]{"-a-"});  // sets v == null
 //
 
+// ReSharper disable All
+
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
-using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Runtime.Serialization;
 using System.Security.Permissions;
 using System.Text;
 using System.Text.RegularExpressions;
 
-#if LINQ
-using System.Linq;
-#endif
-
-#if TEST
-using NDesk.Options;
-#endif
-
-#if NDESK_OPTIONS
-namespace NDesk.Options
-#else
 namespace Mono.Options
-#endif
 {
     public class OptionValueCollection : IList, IList<string>
     {
@@ -550,21 +540,6 @@ namespace Mono.Options
             throw new InvalidOperationException("Option has no names!");
         }
 
-        [Obsolete("Use KeyedCollection.this[string]")]
-        protected Option GetOptionForName(string option)
-        {
-            if (option == null)
-                throw new ArgumentNullException("option");
-            try
-            {
-                return base[option];
-            }
-            catch (KeyNotFoundException)
-            {
-                return null;
-            }
-        }
-
         protected override void InsertItem(int index, Option item)
         {
             base.InsertItem(index, item);
@@ -728,35 +703,6 @@ namespace Mono.Options
             return new OptionContext(this);
         }
 
-#if LINQ
-		public List<string> Parse (IEnumerable<string> arguments)
-		{
-			bool process = true;
-			OptionContext c = CreateOptionContext ();
-			c.OptionIndex = -1;
-			var def = GetOptionForName ("<>");
-			var unprocessed = 
-				from argument in arguments
-				where ++c.OptionIndex >= 0 && (process || def != null)
-					? process
-						? argument == "--" 
-							? (process = false)
-							: !Parse (argument, c)
-								? def != null 
-									? Unprocessed (null, def, c, argument) 
-									: true
-								: false
-						: def != null 
-							? Unprocessed (null, def, c, argument)
-							: true
-					: true
-				select argument;
-			List<string> r = unprocessed.ToList ();
-			if (c.Option != null)
-				c.Option.Invoke (c);
-			return r;
-		}
-#else
         public List<string> Parse(IEnumerable<string> arguments)
         {
             OptionContext c = CreateOptionContext();
@@ -784,7 +730,6 @@ namespace Mono.Options
                 c.Option.Invoke(c);
             return unprocessed;
         }
-#endif
 
         private static bool Unprocessed(ICollection<string> extra, Option def, OptionContext c, string argument)
         {
@@ -836,9 +781,9 @@ namespace Mono.Options
                 return false;
 
             Option p;
-            if (Contains(n))
+            if (ContainsKey(n))
             {
-                p = this[n];
+                p = GetOptionForKey(n);
                 c.OptionName = f + n;
                 c.Option = p;
                 switch (p.OptionValueType)
@@ -862,6 +807,16 @@ namespace Mono.Options
                 return true;
 
             return false;
+        }
+
+        private bool ContainsKey(string key)
+        {
+            return this.SelectMany(op => op.Names.Select(n => n.ToLower())).Contains(key.ToLower());
+        }
+
+        private Option GetOptionForKey(string key)
+        {
+            return this.SingleOrDefault(op => op.Names.Select(n => n.ToLower()).Contains(key.ToLower()));
         }
 
         private void ParseValue(string option, OptionContext c)

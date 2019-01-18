@@ -1,7 +1,7 @@
 #region License
-// 
-// Copyright (c) 2007-2009, Sean Chambers <schambers80@gmail.com>
-// 
+//
+// Copyright (c) 2007-2018, Sean Chambers <schambers80@gmail.com>
+//
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -16,43 +16,30 @@
 //
 #endregion
 
-using System;
 using System.Linq;
-using FluentMigrator.Builders.Delete;
-using FluentMigrator.Builders.Execute;
-using FluentMigrator.Builders.Update;
+
 using FluentMigrator.Infrastructure;
 
 namespace FluentMigrator
 {
+    /// <summary>
+    /// A migration base class that will automatically generate the down expressions
+    /// </summary>
+    /// <remarks>
+    /// This only works for some expressions like CREATE TABLE, but not for DROP TABLE.
+    /// </remarks>
     public abstract class AutoReversingMigration : MigrationBase
     {
+        /// <inheritdoc />
         public sealed override void Down()
         {
         }
 
+        /// <inheritdoc />
         public override void GetDownExpressions(IMigrationContext context)
         {
             GetUpExpressions(context);
             context.Expressions = context.Expressions.Select(e => e.Reverse()).Reverse().ToList();
-        }
-
-        [Obsolete("Delete cannot auto-reversed and will no longer be available for auto-reversing migrations.", false)]
-        public IDeleteExpressionRoot Delete
-        {
-            get { return new DeleteExpressionRoot(_context); }
-        }
-
-        [Obsolete("Execute cannot auto-reversed and will no longer be available for auto-reversing migrations.", false)]
-        public IExecuteExpressionRoot Execute
-        {
-            get { return new ExecuteExpressionRoot(_context); }
-        }
-
-        [Obsolete("Update cannot auto-reversed and will no longer be available for auto-reversing migrations.", false)]
-        public IUpdateExpressionRoot Update
-        {
-            get { return new UpdateExpressionRoot(_context); }
         }
     }
 }

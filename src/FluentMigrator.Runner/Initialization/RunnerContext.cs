@@ -1,13 +1,32 @@
+#region License
+//
+// Copyright (c) 2018, Fluent Migrator Project
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+#endregion
+
+using System;
 using System.Collections.Generic;
 
 namespace FluentMigrator.Runner.Initialization
 {
+    [Obsolete]
     public class RunnerContext : IRunnerContext
     {
         public RunnerContext(IAnnouncer announcer)
         {
             Announcer = announcer;
-            StopWatch = new StopWatch();
         }
 
         public string Database { get; set; }
@@ -23,25 +42,25 @@ namespace FluentMigrator.Runner.Initialization
         public int Steps { get; set; }
         public string WorkingDirectory { get; set; }
         public string Profile { get; set; }
-        public int Timeout { get; set; }
+        public int? Timeout { get; set; }
         public string ConnectionStringConfigPath { get; set; }
         public IEnumerable<string> Tags { get; set; }
         public bool TransactionPerSession { get; set; }
+
+        /// <inheritdoc />
+        public bool AllowBreakingChange { get; set; }
         public string ProviderSwitches { get; set; }
 
-        public IAnnouncer Announcer
-        {
-            get;
-            private set;
-        }
+        public IAnnouncer Announcer { get; }
 
-        public IStopWatch StopWatch
-        {
-            get;
-            private set;
-        }
+        public IStopWatch StopWatch { get; } = new StopWatch();
 
-        /// <summary>The arbitrary application context passed to the task runner.</summary>
+        /// <inheritdoc />
         public object ApplicationContext { get; set; }
+
+        /// <inheritdoc />
+        public string DefaultSchemaName { get; set; }
+
+        public bool StripComments { get; set; }
     }
 }

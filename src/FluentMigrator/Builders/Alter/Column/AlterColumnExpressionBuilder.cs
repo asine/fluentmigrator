@@ -1,13 +1,13 @@
 #region License
 
-// Copyright (c) 2007-2009, Sean Chambers <schambers80@gmail.com>
-// 
+// Copyright (c) 2007-2018, Sean Chambers <schambers80@gmail.com>
+//
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
-// 
+//
 // http://www.apache.org/licenses/LICENSE-2.0
-// 
+//
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -16,15 +16,17 @@
 
 #endregion
 
-using System;
-using System.Collections.Generic;
 using System.Data;
+
 using FluentMigrator.Expressions;
 using FluentMigrator.Infrastructure;
 using FluentMigrator.Model;
 
 namespace FluentMigrator.Builders.Alter.Column
 {
+    /// <summary>
+    /// An expression builder for a <see cref="AlterColumnExpression"/>
+    /// </summary>
     public class AlterColumnExpressionBuilder : ExpressionBuilderWithColumnTypesBase<AlterColumnExpression, IAlterColumnOptionSyntax>,
                                                 IAlterColumnOnTableSyntax,
                                                 IAlterColumnAsTypeOrInSchemaSyntax,
@@ -33,6 +35,11 @@ namespace FluentMigrator.Builders.Alter.Column
     {
         private readonly IMigrationContext _context;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="AlterColumnExpressionBuilder"/> class.
+        /// </summary>
+        /// <param name="expression">The underlying expression</param>
+        /// <param name="context">The migration context</param>
         public AlterColumnExpressionBuilder(AlterColumnExpression expression, IMigrationContext context)
             : base(expression)
         {
@@ -40,26 +47,37 @@ namespace FluentMigrator.Builders.Alter.Column
             ColumnHelper = new ColumnExpressionBuilderHelper(this, context);
         }
 
+        /// <summary>
+        /// Gets or sets the current foreign key
+        /// </summary>
         public ForeignKeyDefinition CurrentForeignKey { get; set; }
+
+        /// <summary>
+        /// Gets or sets a column expression builder helper
+        /// </summary>
         public ColumnExpressionBuilderHelper ColumnHelper { get; set; }
 
+        /// <inheritdoc />
         public IAlterColumnAsTypeOrInSchemaSyntax OnTable(string name)
         {
             Expression.TableName = name;
             return this;
         }
 
+        /// <inheritdoc />
         public IAlterColumnAsTypeSyntax InSchema(string schemaName)
         {
             Expression.SchemaName = schemaName;
             return this;
         }
 
+        /// <inheritdoc />
         public IAlterColumnOptionSyntax WithDefault(SystemMethods method)
         {
             return WithDefaultValue(method);
         }
 
+        /// <inheritdoc />
         public IAlterColumnOptionSyntax WithDefaultValue(object value)
         {
             // we need to do a drop constraint and then add constraint to change the default value
@@ -78,35 +96,41 @@ namespace FluentMigrator.Builders.Alter.Column
             return this;
         }
 
+        /// <inheritdoc />
         public IAlterColumnOptionSyntax WithColumnDescription(string description)
         {
             Expression.Column.ColumnDescription = description;
             return this;
         }
 
+        /// <inheritdoc />
         public IAlterColumnOptionSyntax Identity()
         {
             Expression.Column.IsIdentity = true;
             return this;
         }
 
+        /// <inheritdoc />
         public IAlterColumnOptionSyntax Indexed()
         {
             return Indexed(null);
         }
 
+        /// <inheritdoc />
         public IAlterColumnOptionSyntax Indexed(string indexName)
         {
             ColumnHelper.Indexed(indexName);
             return this;
         }
 
+        /// <inheritdoc />
         public IAlterColumnOptionSyntax PrimaryKey()
         {
             Expression.Column.IsPrimaryKey = true;
             return this;
         }
 
+        /// <inheritdoc />
         public IAlterColumnOptionSyntax PrimaryKey(string primaryKeyName)
         {
             Expression.Column.IsPrimaryKey = true;
@@ -114,40 +138,47 @@ namespace FluentMigrator.Builders.Alter.Column
             return this;
         }
 
+        /// <inheritdoc />
         public IAlterColumnOptionSyntax Nullable()
         {
             ColumnHelper.SetNullable(true);
             return this;
         }
 
+        /// <inheritdoc />
         public IAlterColumnOptionSyntax NotNullable()
         {
             ColumnHelper.SetNullable(false);
             return this;
         }
 
+        /// <inheritdoc />
         public IAlterColumnOptionSyntax Unique()
         {
             ColumnHelper.Unique(null);
             return this;
         }
 
+        /// <inheritdoc />
         public IAlterColumnOptionSyntax Unique(string indexName)
         {
             ColumnHelper.Unique(indexName);
             return this;
         }
 
+        /// <inheritdoc />
         public IAlterColumnOptionOrForeignKeyCascadeSyntax ForeignKey(string primaryTableName, string primaryColumnName)
         {
             return ForeignKey(null, null, primaryTableName, primaryColumnName);
         }
 
+        /// <inheritdoc />
         public IAlterColumnOptionOrForeignKeyCascadeSyntax ForeignKey(string foreignKeyName, string primaryTableName, string primaryColumnName)
         {
             return ForeignKey(foreignKeyName, null, primaryTableName, primaryColumnName);
         }
 
+        /// <inheritdoc />
         public IAlterColumnOptionOrForeignKeyCascadeSyntax ForeignKey(string foreignKeyName, string primaryTableSchema, string primaryTableName,
                                                                       string primaryColumnName)
         {
@@ -170,19 +201,23 @@ namespace FluentMigrator.Builders.Alter.Column
 
             _context.Expressions.Add(fk);
             CurrentForeignKey = fk.ForeignKey;
+            Expression.Column.ForeignKey = fk.ForeignKey;
             return this;
         }
 
+        /// <inheritdoc />
         public IAlterColumnOptionOrForeignKeyCascadeSyntax ReferencedBy(string foreignTableName, string foreignColumnName)
         {
             return ReferencedBy(null, null, foreignTableName, foreignColumnName);
         }
 
+        /// <inheritdoc />
         public IAlterColumnOptionOrForeignKeyCascadeSyntax ReferencedBy(string foreignKeyName, string foreignTableName, string foreignColumnName)
         {
             return ReferencedBy(foreignKeyName, null, foreignTableName, foreignColumnName);
         }
 
+        /// <inheritdoc />
         public IAlterColumnOptionOrForeignKeyCascadeSyntax ReferencedBy(string foreignKeyName, string foreignTableSchema, string foreignTableName,
                                                                         string foreignColumnName)
         {
@@ -206,59 +241,34 @@ namespace FluentMigrator.Builders.Alter.Column
             return this;
         }
 
+        /// <inheritdoc />
         public IAlterColumnOptionOrForeignKeyCascadeSyntax ForeignKey()
         {
             Expression.Column.IsForeignKey = true;
             return this;
         }
 
-        [Obsolete("Please use ReferencedBy syntax. This method will be removed in the next version")]
-        public IAlterColumnOptionSyntax References(string foreignKeyName, string foreignTableName, IEnumerable<string> foreignColumnNames)
-        {
-            return References(foreignKeyName, null, foreignTableName, foreignColumnNames);
-        }
-
-        [Obsolete("Please use ReferencedBy syntax. This method will be removed in the next version")]
-        public IAlterColumnOptionSyntax References(string foreignKeyName, string foreignTableSchema, string foreignTableName,
-                                                   IEnumerable<string> foreignColumnNames)
-        {
-            var fk = new CreateForeignKeyExpression
-                         {
-                             ForeignKey = new ForeignKeyDefinition
-                                              {
-                                                  Name = foreignKeyName,
-                                                  PrimaryTable = Expression.TableName,
-                                                  PrimaryTableSchema = Expression.SchemaName,
-                                                  ForeignTable = foreignTableName,
-                                                  ForeignTableSchema = foreignTableSchema
-                                              }
-                         };
-
-            fk.ForeignKey.PrimaryColumns.Add(Expression.Column.Name);
-            foreach (var foreignColumnName in foreignColumnNames)
-                fk.ForeignKey.ForeignColumns.Add(foreignColumnName);
-
-            _context.Expressions.Add(fk);
-            return this;
-        }
-
+        /// <inheritdoc />
         public override ColumnDefinition GetColumnForType()
         {
             return Expression.Column;
         }
 
+        /// <inheritdoc />
         public IAlterColumnOptionOrForeignKeyCascadeSyntax OnDelete(Rule rule)
         {
             CurrentForeignKey.OnDelete = rule;
             return this;
         }
 
+        /// <inheritdoc />
         public IAlterColumnOptionOrForeignKeyCascadeSyntax OnUpdate(Rule rule)
         {
             CurrentForeignKey.OnUpdate = rule;
             return this;
         }
 
+        /// <inheritdoc />
         public IAlterColumnOptionSyntax OnDeleteOrUpdate(Rule rule)
         {
             OnDelete(rule);
@@ -266,28 +276,13 @@ namespace FluentMigrator.Builders.Alter.Column
             return this;
         }
 
-        string IColumnExpressionBuilder.SchemaName
-        {
-            get
-            {
-                return Expression.SchemaName;
-            }
-        }
+        /// <inheritdoc />
+        string IColumnExpressionBuilder.SchemaName => Expression.SchemaName;
 
-        string IColumnExpressionBuilder.TableName
-        {
-            get
-            {
-                return Expression.TableName;
-            }
-        }
+        /// <inheritdoc />
+        string IColumnExpressionBuilder.TableName => Expression.TableName;
 
-        ColumnDefinition IColumnExpressionBuilder.Column
-        {
-            get
-            {
-                return Expression.Column;
-            }
-        }
+        /// <inheritdoc />
+        ColumnDefinition IColumnExpressionBuilder.Column => Expression.Column;
     }
 }

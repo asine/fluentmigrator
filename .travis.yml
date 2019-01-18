@@ -1,14 +1,35 @@
-language: c
-
-install:
-  - sudo apt-get update -qq
-  - sudo apt-get install -y mono-devel mono-gmcs nunit-console libfbembed2.5
-
+language: csharp
+dist: trusty
+sudo: false
+mono: latest
+dotnet: 2.1
+git:
+  depth: false
+before_script:
+- nuget install GitVersion.CommandLine -Version 4.0.0-beta0012 -Prerelease -ExcludeVersion
+- export GITVERSION_TOOL="mono GitVersion.CommandLine/tools/GitVersion.exe"
+- export VERSION=$($GITVERSION_TOOL /showvariable SemVer)
+- echo Using Version=$VERSION
+- chmod a+x ./*.sh
 script:
-  - xbuild CI.proj
-  - sudo cp /var/lib/firebird/2.5/system/default-security2.fdb /var/lib/firebird/2.5/system/security2.fdb
-  - sudo chmod a+rw /var/lib/firebird/2.5/system/security2.fdb
-  - dpkg -L libfbembed2.5
-  - for f in $(dpkg -L libfbembed2.5 | grep libfbembed.so); do cp $f ./src/FluentMigrator.Tests/bin/Debug; done
-  - for f in $(dpkg -L libfbembed2.5 | grep libfbembed.so); do cp $f ./src/FluentMigrator.Tests/bin/Debug/libfbembed.so; done
-  - nunit-console -framework=4.0 ./src/FluentMigrator.Tests/bin/Debug/FluentMigrator.Tests.dll -exclude Integration,NotWorkingOnMono
+- dotnet pack ./FluentMigrator.sln -c "Release" -o "$TRAVIS_BUILD_DIR/output" -p:SourceLinkCreate=true "-p:Version=$VERSION"
+- dotnet test ./test/FluentMigrator.Tests/FluentMigrator.Tests.csproj --filter 'TestCategory!=NotWorkingOnMono&(TestCategory!=Integration|(TestCategory=Integration&(TestCategory=SQLite)))'
+- dotnet publish src/FluentMigrator.Console/FluentMigrator.Console.csproj -c Release -r win7-x86 -o "$TRAVIS_BUILD_DIR/publish/tools/net461/x86" -p:Platform=x86 -p:TargetFramework=net461
+- dotnet publish src/FluentMigrator.Console/FluentMigrator.Console.csproj -c Release -r win7-x64 -o "$TRAVIS_BUILD_DIR/publish/tools/net461/x64" -p:Platform=x64 -p:TargetFramework=net461
+- dotnet publish src/FluentMigrator.Console/FluentMigrator.Console.csproj -c Release -r any -o "$TRAVIS_BUILD_DIR/publish/tools/net461/any" -p:Platform=AnyCPU -p:TargetFramework=net461
+- nuget pack publish/FluentMigrator.Console.nuspec -OutputDirectory "$TRAVIS_BUILD_DIR/output" -Version "$VERSION" -Properties Configuration=Release
+- nuget pack publish/FluentMigrator.Tools.nuspec -OutputDirectory "$TRAVIS_BUILD_DIR/output" -Version "$VERSION" -Properties Configuration=Release
+deploy: 
+- provider: script 
+  skip_cleanup: true
+  script: bash ./myget-upload.sh 
+  on: 
+    condition: '"$TRAVIS_BRANCH" == release/* || "$TRAVIS_BRANCH" == develop'
+    all_branches: true
+- provider: script 
+  skip_cleanup: true
+  script: bash ./nuget-upload.sh 
+  on: 
+    condition: '$TRAVIS_TAG =~ ^v[[:digit:]]+(\.[[:digit:]]+)+$'
+    tags: true
+    branch: master

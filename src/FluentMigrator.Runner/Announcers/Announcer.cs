@@ -1,13 +1,13 @@
-﻿#region License
+#region License
 
-// Copyright (c) 2007-2009, Sean Chambers <schambers80@gmail.com>
-// 
+// Copyright (c) 2007-2018, Sean Chambers <schambers80@gmail.com>
+//
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
-// 
+//
 // http://www.apache.org/licenses/LICENSE-2.0
-// 
+//
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -18,26 +18,41 @@
 
 using System;
 
+using Microsoft.Extensions.Options;
+
 namespace FluentMigrator.Runner.Announcers
 {
+    [Obsolete]
     public abstract class Announcer : IAnnouncer
     {
         public virtual bool ShowSql { get; set; }
         public virtual bool ShowElapsedTime { get; set; }
 
+        protected Announcer()
+        {
+        }
+
+        protected Announcer(IOptions<AnnouncerOptions> options)
+        {
+            // ReSharper disable VirtualMemberCallInConstructor
+            ShowSql = options.Value.ShowSql;
+            ShowElapsedTime = options.Value.ShowElapsedTime;
+            // ReSharper restore VirtualMemberCallInConstructor
+        }
+
         public virtual void Heading(string message)
         {
-            Write(message, true);
+            Write(message);
         }
 
         public virtual void Say(string message)
         {
-            Write(message, true);
+            Write(message);
         }
 
         public virtual void Emphasize(string message)
         {
-            Write(message, true);
+            Write(message);
         }
 
         public virtual void Sql(string sql)
@@ -45,7 +60,7 @@ namespace FluentMigrator.Runner.Announcers
             if (!ShowSql) return;
 
             if (string.IsNullOrEmpty(sql))
-                Write("No SQL statement executed.", true);
+                Write("No SQL statement executed.");
             else Write(sql, false);
         }
 
@@ -53,7 +68,7 @@ namespace FluentMigrator.Runner.Announcers
         {
             if (!ShowElapsedTime) return;
 
-            Write(string.Format("=> {0}s", timeSpan.TotalSeconds), true);
+            Write(string.Format("=> {0}s", timeSpan.TotalSeconds));
         }
 
         public virtual void Error(Exception exception)
@@ -67,9 +82,9 @@ namespace FluentMigrator.Runner.Announcers
 
         public virtual void Error(string message)
         {
-            Write(string.Format("!!! {0}", message), true);
+            Write(string.Format("!!! {0}", message));
         }
 
-        public abstract void Write(string message, bool escaped);
+        public abstract void Write(string message, bool isNotSql = true);
     }
 }

@@ -1,7 +1,7 @@
 #region License
-// 
-// Copyright (c) 2007-2009, Sean Chambers <schambers80@gmail.com>
-// 
+//
+// Copyright (c) 2007-2018, Sean Chambers <schambers80@gmail.com>
+//
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -18,21 +18,33 @@
 
 using System.Collections.Generic;
 using System.ComponentModel;
+
 using FluentMigrator.Expressions;
 using FluentMigrator.Infrastructure;
 using FluentMigrator.Model;
 
 namespace FluentMigrator.Builders.Insert
 {
+    /// <summary>
+    /// An expression builder for a <see cref="InsertDataExpression"/>
+    /// </summary>
     public class InsertDataExpressionBuilder : IInsertDataOrInSchemaSyntax, ISupportAdditionalFeatures
     {
         private readonly InsertDataExpression _expression;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="InsertDataExpressionBuilder"/> class.
+        /// </summary>
+        /// <param name="expression">The underlying expression</param>
         public InsertDataExpressionBuilder(InsertDataExpression expression)
         {
             _expression = expression;
         }
 
+        /// <inheritdoc />
+        public IDictionary<string, object> AdditionalFeatures => _expression.AdditionalFeatures;
+
+        /// <inheritdoc />
         public IInsertDataSyntax Row(object dataAsAnonymousType)
         {
             IDictionary<string, object> data = ExtractData(dataAsAnonymousType);
@@ -40,6 +52,7 @@ namespace FluentMigrator.Builders.Insert
             return Row(data);
         }
 
+        /// <inheritdoc />
         public IInsertDataSyntax Row(IDictionary<string, object> data)
         {
             var dataDefinition = new InsertionDataDefinition();
@@ -51,18 +64,7 @@ namespace FluentMigrator.Builders.Insert
             return this;
         }
 
-        void ISupportAdditionalFeatures.AddAdditionalFeature(string feature, object value)
-        {
-            if (!_expression.AdditionalFeatures.ContainsKey(feature))
-            {
-                _expression.AdditionalFeatures.Add(feature, value);
-            }
-            else
-            {
-                _expression.AdditionalFeatures[feature] = value;
-            }
-        }
-
+        /// <inheritdoc />
         public IInsertDataSyntax InSchema(string schemaName)
         {
             _expression.SchemaName = schemaName;

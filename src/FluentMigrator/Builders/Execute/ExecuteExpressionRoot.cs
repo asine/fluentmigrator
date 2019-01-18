@@ -1,7 +1,7 @@
 #region License
-// 
-// Copyright (c) 2007-2009, Sean Chambers <schambers80@gmail.com>
-// 
+//
+// Copyright (c) 2007-2018, Sean Chambers <schambers80@gmail.com>
+//
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -19,60 +19,109 @@
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Diagnostics;
+
 using FluentMigrator.Expressions;
 using FluentMigrator.Infrastructure;
-using System.Runtime.CompilerServices;
-using System.Reflection;
+
+using Microsoft.Extensions.DependencyInjection;
 
 namespace FluentMigrator.Builders.Execute
 {
+    /// <summary>
+    /// The implementation of the <see cref="IExecuteExpressionRoot"/> interface.
+    /// </summary>
     public class ExecuteExpressionRoot : IExecuteExpressionRoot
     {
         private readonly IMigrationContext _context;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ExecuteExpressionRoot"/> class.
+        /// </summary>
+        /// <param name="context">The migration context</param>
         public ExecuteExpressionRoot(IMigrationContext context)
         {
             _context = context;
         }
 
+        /// <inheritdoc />
         public void Sql(string sqlStatement)
         {
             var expression = new ExecuteSqlStatementExpression { SqlStatement = sqlStatement };
             _context.Expressions.Add(expression);
         }
 
+        /// <inheritdoc />
+        public void Script(string pathToSqlScript, IDictionary<string, string> parameters)
+        {
+            var expression = new ExecuteSqlScriptExpression
+            {
+                SqlScript = pathToSqlScript,
+                Parameters = parameters,
+            };
+
+            _context.Expressions.Add(expression);
+        }
+
+        /// <inheritdoc />
         public void Script(string pathToSqlScript)
         {
             var expression = new ExecuteSqlScriptExpression { SqlScript = pathToSqlScript };
             _context.Expressions.Add(expression);
         }
 
+        /// <inheritdoc />
         public void WithConnection(Action<IDbConnection, IDbTransaction> operation)
         {
             var expression = new PerformDBOperationExpression { Operation = operation };
             _context.Expressions.Add(expression);
         }
 
-        public void EmbeddedScript(string EmbeddedSqlScriptName)
+        /// <inheritdoc />
+        public void EmbeddedScript(string embeddedSqlScriptName)
         {
-            var expression = new ExecuteEmbeddedSqlScriptExpression { SqlScript = EmbeddedSqlScriptName, MigrationAssemblies = _context.MigrationAssemblies };
+            var embeddedResourceProviders = _context.ServiceProvider.GetService<IEnumerable<IEmbeddedResourceProvider>>();
+            if (embeddedResourceProviders == null)
+            {
+#pragma warning disable 612
+                Debug.Assert(_context.MigrationAssemblies != null, "_context.MigrationAssemblies != null");
+                var expression = new ExecuteEmbeddedSqlScriptExpression(_context.MigrationAssemblies) { SqlScript = embeddedSqlScriptName };
+#pragma warning restore 612
+                _context.Expressions.Add(expression);
+            }
+            else
+            {
+                var expression = new ExecuteEmbeddedSqlScriptExpression(embeddedResourceProviders) { SqlScript = embeddedSqlScriptName };
+                _context.Expressions.Add(expression);
+            }
+        }
+
+        /// <inheritdoc />
+        public void EmbeddedScript(string embeddedSqlScriptName, IDictionary<string, string> parameters)
+        {
+            var embeddedResourceProviders = _context.ServiceProvider.GetService<IEnumerable<IEmbeddedResourceProvider>>();
+            ExecuteEmbeddedSqlScriptExpression expression;
+            if (embeddedResourceProviders == null)
+            {
+#pragma warning disable 612
+                Debug.Assert(_context.MigrationAssemblies != null, "_context.MigrationAssemblies != null");
+                expression = new ExecuteEmbeddedSqlScriptExpression(_context.MigrationAssemblies)
+                {
+                    SqlScript = embeddedSqlScriptName,
+                    Parameters = parameters,
+                };
+#pragma warning restore 612
+            }
+            else
+            {
+                expression = new ExecuteEmbeddedSqlScriptExpression(embeddedResourceProviders)
+                {
+                    SqlScript = embeddedSqlScriptName,
+                    Parameters = parameters,
+                };
+            }
+
             _context.Expressions.Add(expression);
         }
-    }
-
-    public class PerformDBOperationExpression : MigrationExpressionBase
-    {
-        public override void ExecuteWith(IMigrationProcessor processor)
-        {
-            processor.Process(this);
-        }
-
-        public override void CollectValidationErrors(ICollection<string> errors)
-        {
-            if (Operation == null)
-                errors.Add(ErrorMessages.OperationCannotBeNull);
-        }
-
-        public Action<IDbConnection, IDbTransaction> Operation { get; set; }
     }
 }
