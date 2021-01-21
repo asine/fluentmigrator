@@ -20,6 +20,7 @@ using System.Collections.Generic;
 using System.Linq;
 
 using FluentMigrator.Expressions;
+using FluentMigrator.Infrastructure;
 using FluentMigrator.Infrastructure.Extensions;
 using FluentMigrator.Model;
 using FluentMigrator.SqlServer;
@@ -78,10 +79,10 @@ namespace FluentMigrator.Runner.Generators.SqlServer
         {
             bool? GetNullsDistinct(IndexColumnDefinition column)
             {
-                return column.GetAdditionalFeature(SqlServerExtensions.IndexColumnNullsDistinct, (bool?) null);
+                return column.GetAdditionalFeature(SqlServerExtensions.IndexColumnNullsDistinct, (bool?)null);
             }
 
-            var indexNullsDistinct = index.GetAdditionalFeature(SqlServerExtensions.IndexColumnNullsDistinct, (bool?) null);
+            var indexNullsDistinct = index.GetAdditionalFeature(SqlServerExtensions.IndexColumnNullsDistinct, (bool?)null);
 
             var nullDistinctColumns = index.Columns.Where(c => indexNullsDistinct != null || GetNullsDistinct(c) != null).ToList();
             if (nullDistinctColumns.Count != 0 && !index.IsUnique)
@@ -110,6 +111,44 @@ namespace FluentMigrator.Runner.Generators.SqlServer
             var sql = base.Generate(expression);
             sql += GetWithNullsDistinctString(expression.Index);
             return sql;
+        }
+
+        public override string GetFilterString(CreateIndexExpression createIndexExpression)
+        {
+            var filter = createIndexExpression.Index.GetAdditionalFeature<string>(SqlServerExtensions.IndexFilter);
+
+            
+            if (!string.IsNullOrWhiteSpace(filter))
+            {
+                if (createIndexExpression.Index.IsClustered)
+                    throw new System.Exception("Filtered indexes are nonclustered indexes that have the additon of a WHERE clause. " +
+                        "SQL Server does not support clustered filtered indexes. " +
+                        "Create a non-clustered index with include columns instead to create a non-clustered covering index.");
+
+                return " WHERE " + filter;
+            }
+
+            return string.Empty;
+        }
+
+        /// <inheritdoc />
+        public override string GetWithOptions(ISupportAdditionalFeatures expression)
+        {
+            var items = new List<string>();
+            var options = base.GetWithOptions(expression);
+
+            if (!string.IsNullOrEmpty(options))
+            {
+                items.Add(options);
+            }
+
+            var dataCompressionType = expression.GetAdditionalFeature(SqlServerExtensions.DataCompression, (DataCompressionType)null);
+            if (dataCompressionType != null)
+            {
+                items.Add($"DATA_COMPRESSION = {dataCompressionType}");
+            }
+
+            return string.Join(", ", items);
         }
     }
 }

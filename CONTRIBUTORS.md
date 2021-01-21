@@ -1,4 +1,6 @@
-﻿A list of all of the 65+ contributors to FluentMigrator. Their pull requests are what keeps FluentMigrator alive and growing!
+A list of all of the 65+ contributors to FluentMigrator. Their pull requests are what keeps FluentMigrator alive and growing!
+
+You can also see contributors via https://github.com/fluentmigrator/fluentmigrator/graphs/contributors
 
 * [jcberleur](https://github.com/jcberleur) (JC Berleur)
 * [izevka](https://github.com/izevka) (Igor Zevaka)
@@ -77,3 +79,4 @@
 * [daniellee](https://github.com/daniellee) (Daniel Lee)
 * [tommarien](https://github.com/tommarien) (Tom Marien)
 * [schambers](https://github.com/schambers) (Sean Chambers)
+* [igitur](https://github.com/igitur) (Francois Botha)

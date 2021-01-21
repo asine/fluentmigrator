@@ -22,7 +22,9 @@ using System.Linq;
 using System.Text;
 
 using FluentMigrator.Expressions;
+using FluentMigrator.Infrastructure.Extensions;
 using FluentMigrator.Model;
+using FluentMigrator.Postgres;
 using FluentMigrator.Runner.Generators.Generic;
 
 using JetBrains.Annotations;
@@ -54,6 +56,22 @@ namespace FluentMigrator.Runner.Generators.Postgres
         {
         }
 
+        protected PostgresGenerator(
+            [NotNull] IColumn column,
+            [NotNull] PostgresQuoter quoter,
+            [NotNull] IOptions<GeneratorOptions> generatorOptions)
+            : base(column, quoter, new PostgresDescriptionGenerator(quoter), generatorOptions)
+        {
+        }
+
+        public override string CreateTable { get { return "CREATE TABLE {0} ({1})"; } }
+        public override string DropTable { get { return "DROP TABLE {0};"; } }
+
+        public override string AddColumn { get { return "ALTER TABLE {0} ADD {1};"; } }
+        public override string DropColumn { get { return "ALTER TABLE {0} DROP COLUMN {1};"; } }
+        public override string AlterColumn { get { return "ALTER TABLE {0} {1};"; } }
+        public override string RenameColumn { get { return "ALTER TABLE {0} RENAME COLUMN {1} TO {2};"; } }
+
         public override string Generate(AlterTableExpression expression)
         {
             var alterStatement = new StringBuilder();
@@ -80,7 +98,7 @@ namespace FluentMigrator.Runner.Generators.Postgres
         {
             var createStatement = new StringBuilder();
             createStatement.AppendFormat(
-                "CREATE TABLE {0} ({1})",
+                CreateTable,
                 Quoter.QuoteTableName(expression.TableName, expression.SchemaName),
                 Column.Generate(expression.Columns, Quoter.Quote(expression.TableName)));
             var descriptionStatement = DescriptionGenerator.GenerateDescriptionStatements(expression)
@@ -99,7 +117,7 @@ namespace FluentMigrator.Runner.Generators.Postgres
         {
             var alterStatement = new StringBuilder();
             alterStatement.AppendFormat(
-                "ALTER TABLE {0} {1};",
+                AlterColumn,
                 Quoter.QuoteTableName(expression.TableName, expression.SchemaName),
                 ((PostgresColumn)Column).GenerateAlterClauses(expression.Column));
             var descriptionStatement = DescriptionGenerator.GenerateDescriptionStatement(expression);
@@ -114,19 +132,16 @@ namespace FluentMigrator.Runner.Generators.Postgres
         public override string Generate(CreateColumnExpression expression)
         {
             var createStatement = new StringBuilder();
-            createStatement.AppendFormat("ALTER TABLE {0} ADD {1};", Quoter.QuoteTableName(expression.TableName, expression.SchemaName), Column.Generate(expression.Column));
+            createStatement.AppendFormat(base.Generate(expression));
+
             var descriptionStatement = DescriptionGenerator.GenerateDescriptionStatement(expression);
             if (!string.IsNullOrEmpty(descriptionStatement))
             {
                 createStatement.Append(";");
                 createStatement.Append(descriptionStatement);
             }
-            return createStatement.ToString();
-        }
 
-        public override string Generate(DeleteTableExpression expression)
-        {
-            return string.Format("DROP TABLE {0};", Quoter.QuoteTableName(expression.TableName, expression.SchemaName));
+            return createStatement.ToString();
         }
 
         public override string Generate(DeleteColumnExpression expression)
@@ -135,7 +150,7 @@ namespace FluentMigrator.Runner.Generators.Postgres
             foreach (string columnName in expression.ColumnNames)
             {
                 if (expression.ColumnNames.First() != columnName) builder.AppendLine("");
-                builder.AppendFormat("ALTER TABLE {0} DROP COLUMN {1};",
+                builder.AppendFormat(DropColumn,
                     Quoter.QuoteTableName(expression.TableName, expression.SchemaName),
                     Quoter.QuoteColumnName(columnName));
             }
@@ -167,39 +182,135 @@ namespace FluentMigrator.Runner.Generators.Postgres
                 Quoter.Quote(expression.ForeignKey.Name));
         }
 
+
+        protected virtual string GetIncludeString(CreateIndexExpression column)
+        {
+            var includes = column.GetAdditionalFeature<IList<PostgresIndexIncludeDefinition>>(PostgresExtensions.IncludesList);
+
+            if (includes == null || includes.Count == 0)
+            {
+                return string.Empty;
+            }
+
+            throw new NotSupportedException("The current version doesn't support include index. Please use Postgres 11.");
+        }
+
+        protected virtual Algorithm GetIndexMethod(CreateIndexExpression expression)
+        {
+            var algorithm = expression.GetAdditionalFeature<PostgresIndexAlgorithmDefinition>(PostgresExtensions.IndexAlgorithm);
+            if (algorithm == null)
+            {
+                return Algorithm.BTree;
+            }
+
+            return algorithm.Algorithm;
+        }
+
+        protected virtual string GetFilter(CreateIndexExpression expression)
+        {
+            var filter = expression.Index.GetAdditionalFeature<string>(PostgresExtensions.IndexFilter);
+            if (!string.IsNullOrWhiteSpace(filter))
+            {
+                return " WHERE " + filter;
+            }
+
+            return string.Empty;
+        }
+
+        protected virtual string GetAsConcurrently(CreateIndexExpression expression)
+        {
+            var asConcurrently = expression.GetAdditionalFeature<PostgresIndexConcurrentlyDefinition>(PostgresExtensions.Concurrently);
+
+            if (asConcurrently == null || !asConcurrently.IsConcurrently)
+            {
+                return string.Empty;
+            }
+
+            return " CONCURRENTLY";
+        }
+
+        protected virtual string GetAsOnly(CreateIndexExpression expression)
+        {
+            var asOnly = expression.GetAdditionalFeature<PostgresIndexOnlyDefinition>(PostgresExtensions.Only);
+
+            if (asOnly == null || !asOnly.IsOnly)
+            {
+                return string.Empty;
+            }
+
+            throw new NotSupportedException("The current version doesn't support ONLY. Please use Postgres 11 or higher.");
+        }
+
+        protected virtual string GetNullsSort(IndexColumnDefinition column)
+        {
+            var sort = column.GetAdditionalFeature<PostgresIndexNullsSort>(PostgresExtensions.NullsSort);
+            if (sort == null)
+            {
+                return string.Empty;
+            }
+
+            if (sort.Sort == NullSort.First)
+            {
+                return " NULLS FIRST";
+            }
+
+            return " NULLS LAST";
+        }
+
         public override string Generate(CreateIndexExpression expression)
         {
             var result = new StringBuilder("CREATE");
-            if (expression.Index.IsUnique)
-                result.Append(" UNIQUE");
 
-            result.Append(" INDEX {0} ON {1} (");
+            if (expression.Index.IsUnique)
+            {
+                result.Append(" UNIQUE");
+            }
+
+            var indexMethod = GetIndexMethod(expression);
+
+            result.AppendFormat(" INDEX{0} {1} ON{2} {3}{4} (",
+                GetAsConcurrently(expression),
+                Quoter.QuoteIndexName(expression.Index.Name),
+                GetAsOnly(expression),
+                Quoter.QuoteTableName(expression.Index.TableName, expression.Index.SchemaName),
+                // B-Tree is default index method
+                indexMethod == Algorithm.BTree ? string.Empty : $" USING {indexMethod.ToString().ToUpper()}");
 
             var first = true;
             foreach (var column in expression.Index.Columns)
             {
                 if (first)
+                {
                     first = false;
+                }
                 else
+                {
                     result.Append(",");
+                }
 
                 result.Append(Quoter.QuoteColumnName(column.Name));
-                result.Append(column.Direction == Direction.Ascending ? " ASC" : " DESC");
+
+                switch (indexMethod)
+                {
+                    // Doesn't support ASC/DESC neither nulls sorts
+                    case Algorithm.Spgist:
+                    case Algorithm.Gist:
+                    case Algorithm.Gin:
+                    case Algorithm.Brin:
+                    case Algorithm.Hash:
+                        continue;
+                }
+
+                result.Append(column.Direction == Direction.Ascending ? " ASC" : " DESC")
+                .Append(GetNullsSort(column));
             }
-            result.Append(");");
 
-            return string.Format(result.ToString(), Quoter.QuoteIndexName(expression.Index.Name), Quoter.QuoteTableName(expression.Index.TableName, expression.Index.SchemaName));
+            result.Append(")")
+                .Append(GetIncludeString(expression))
+                .Append(GetFilter(expression))
+                .Append(";");
 
-            /*
-            var idx = String.Format(result.ToString(), expression.Index.Name, Quoter.QuoteSchemaName(expression.Index.SchemaName), expression.Index.TableName);
-            if (!expression.Index.IsClustered)
-                return idx;
-
-             // Clustered indexes in Postgres do not cluster updates/inserts to the table after the initial cluster operation is applied.
-             // To keep the clustered index up to date run CLUSTER TableName periodically
-
-            return string.Format("{0}; CLUSTER {1}\"{2}\" ON \"{3}\"", idx, Quoter.QuoteSchemaName(expression.Index.SchemaName), expression.Index.TableName, expression.Index.Name);
-             */
+            return result.ToString();
         }
 
         public override string Generate(DeleteIndexExpression expression)
@@ -218,7 +329,7 @@ namespace FluentMigrator.Runner.Generators.Postgres
         public override string Generate(RenameColumnExpression expression)
         {
             return string.Format(
-                "ALTER TABLE {0} RENAME COLUMN {1} TO {2};",
+                RenameColumn,
                 Quoter.QuoteTableName(expression.TableName, expression.SchemaName),
                 Quoter.QuoteColumnName(expression.OldName),
                 Quoter.QuoteColumnName(expression.NewName));

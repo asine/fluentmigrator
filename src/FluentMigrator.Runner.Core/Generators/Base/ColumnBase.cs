@@ -94,7 +94,7 @@ namespace FluentMigrator.Runner.Generators.Base
         /// <summary>
         /// Formats the column name
         /// </summary>
-        /// <param name="column">The column defintiion</param>
+        /// <param name="column">The column definition</param>
         /// <returns>The (probably) quoted column name</returns>
         public virtual string FormatString(ColumnDefinition column)
         {
@@ -172,7 +172,7 @@ namespace FluentMigrator.Runner.Generators.Base
         /// <returns>The primary key constraint SQL fragment</returns>
         protected virtual string FormatPrimaryKey(ColumnDefinition column)
         {
-            //Most Generators allow for adding primary keys as a constrint
+            //Most Generators allow for adding primary keys as a constraint
             return string.Empty;
         }
 
@@ -299,7 +299,7 @@ namespace FluentMigrator.Runner.Generators.Base
         /// <summary>
         /// Returns a value indicating whether the primary key constraint should be added separately
         /// </summary>
-        /// <param name="primaryKeyColumns">The primary key column defintions</param>
+        /// <param name="primaryKeyColumns">The primary key column definitions</param>
         /// <returns><c>true</c> when the primary key constraint should be added separately</returns>
         public virtual bool ShouldPrimaryKeysBeAddedSeparately(IEnumerable<ColumnDefinition> primaryKeyColumns)
         {
@@ -311,7 +311,7 @@ namespace FluentMigrator.Runner.Generators.Base
         /// Creates the primary key constraint SQL fragment
         /// </summary>
         /// <param name="tableName">The table name</param>
-        /// <param name="primaryKeyColumns">The primary key column defintions</param>
+        /// <param name="primaryKeyColumns">The primary key column definitions</param>
         /// <returns>The SQL fragment</returns>
         public virtual string AddPrimaryKeyConstraint(string tableName, IEnumerable<ColumnDefinition> primaryKeyColumns)
         {

@@ -531,7 +531,7 @@ namespace FluentMigrator.Tests.Unit.Generators
 
         public static AlterColumnExpression GetAlterColumnAddAutoIncrementExpression()
         {
-            ColumnDefinition column = new ColumnDefinition { Name = TestColumnName1, IsIdentity = true, IsPrimaryKey = true, Type = DbType.Int32 };
+            ColumnDefinition column = new ColumnDefinition { Name = TestColumnName1, IsIdentity = true, IsPrimaryKey = true, Type = DbType.Int32, ModificationType = ColumnModificationType.Alter };
             return new AlterColumnExpression { TableName = TestTableName1, Column = column };
         }
 
@@ -546,6 +546,20 @@ namespace FluentMigrator.Tests.Unit.Generators
             expression.Column.Size = 20;
             expression.Column.IsNullable = false;
             expression.Column.ModificationType = ColumnModificationType.Alter;
+
+            return expression;
+        }
+
+        public static CreateColumnExpression GetCreateColumnExpressionWithDateTimeOffsetType()
+        {
+            var expression = new CreateColumnExpression();
+            expression.TableName = TestTableName1;
+
+            expression.Column = new ColumnDefinition();
+            expression.Column.Name = TestColumnName1;
+            expression.Column.IsNullable = true;
+            expression.Column.Type = DbType.DateTimeOffset;
+            expression.Column.ModificationType = ColumnModificationType.Create;
 
             return expression;
         }

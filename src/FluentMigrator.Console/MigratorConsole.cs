@@ -48,6 +48,7 @@ namespace FluentMigrator.Console
         public bool NestedNamespaces;
         public bool Output;
         public string OutputFilename;
+        public bool OutputSemicolonDelimiter = false;
         public bool PreviewOnly;
         public string ProcessorType;
         public string Profile;
@@ -134,6 +135,11 @@ namespace FluentMigrator.Console
                         v => { Output = v != null; }
                     },
                     {
+                        "outputSemicolonDelimiter|outsemdel|osd",
+                        "Whether each command should be delimited with a semicolon.",
+                        v => { OutputSemicolonDelimiter = v != null; }
+                    },
+                    {
                         "outputFilename=|outfile=|of=",
                         "The name of the file to output the generated SQL to. The output option must be included for output to be saved to the file.",
                         v => { OutputFilename = v; }
@@ -175,7 +181,7 @@ namespace FluentMigrator.Console
                     },
                     {
                         "stopOnError=",
-                        "Pauses migration execution until the user input if any error occured. Default is false.",
+                        "Pauses migration execution until the user input if any error occurred. Default is false.",
                         v => { StopOnError = v != null; }
                     },
                     {
@@ -257,7 +263,7 @@ namespace FluentMigrator.Console
                     },
                     {
                         "strip|strip-comments",
-                        "Strip comments from the SQL scripts. Default is true.",
+                        "Strip comments from the SQL scripts. Default is true. To disable, use --strip- or --strip-comments-",
                         v => { StripComments = v != null; }
                     },
                     {
@@ -362,6 +368,10 @@ namespace FluentMigrator.Console
             System.Console.WriteLine(@"  migrate [OPTIONS]");
             System.Console.WriteLine(@"Example:");
             System.Console.WriteLine(@"  migrate -a bin\debug\MyMigrations.dll -db SqlServer2008 -conn ""SEE_BELOW"" -profile ""Debug""");
+            System.Console.WriteLine(@"   ");
+            System.Console.WriteLine(@"Boolean options/flags (those without '=' or ':' in the option format string)");
+            System.Console.WriteLine(@"are explicitly enabled if they are followed with '+', and explicitly");
+            System.Console.WriteLine(@"disabled if they are followed with '-'.");
             System.Console.Out.WriteHorizontalRuler();
             System.Console.WriteLine(@"Example Connection Strings:");
             System.Console.WriteLine(@"  MySql: Data Source=172.0.0.1;Database=Foo;User Id=USERNAME;Password=BLAH");
@@ -451,6 +461,7 @@ namespace FluentMigrator.Console
                             opt.ShowSql = true;
                             opt.OutputFileName = OutputFilename;
                             opt.OutputGoBetweenStatements = ExecutingAgainstMsSql;
+                            opt.OutputSemicolonDelimiter = OutputSemicolonDelimiter;
                         })
                     .AddSingleton<ILoggerProvider, LogFileFluentMigratorLoggerProvider>();
             }
